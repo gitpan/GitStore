@@ -1,0 +1,85 @@
+NAME
+    GitStore - Git as versioned data store in Perl
+
+SYNOPSIS
+        use GitStore;
+
+        my $gs = GitStore->new('/path/to/repo');
+        $gs->store( 'users/obj.txt', $obj );
+        $gs->store( ['config', 'wiki.txt'], { hash_ref => 1 } );
+        $gs->commit();
+        $gs->store( 'yyy/xxx.log', 'Log me' );
+        $gs->discard();
+        
+        # later or in another pl
+        my $val = $gs->get( 'user/obj.txt' ); # $val is the same as $obj
+        my $val = $gs->get( 'config/wiki.txt' ); # $val is { hashref => 1 } );
+        my $val = $gs->get( ['yyy', 'xxx.log' ] ); # $val is undef since discard
+
+DESCRIPTION
+    It is inspired by the Python and Ruby binding. check SEE ALSO
+
+METHODS
+  new
+        GitStore->new('/path/to/repo');
+        GitStore->new( repo => '/path/to/repo', branch => 'mybranch' );
+
+  store($path, $val)
+        $gs->store( 'yyy/xxx.log', 'Log me' );
+        $gs->store( ['config', 'wiki.txt'], { hash_ref => 1 } );
+        $gs->store( 'users/obj.txt', $obj );
+
+    Store $val as a $path file in Git
+
+    $path can be String or ArrayRef
+
+    $val can be String or Ref[HashRef|ArrayRef|Ref[Ref]] or blessed Object
+
+  get($path)
+        $gs->get( 'user/obj.txt' );
+        $gs->get( ['yyy', 'xxx.log' ] );
+
+    Get $val from the $path file
+
+    $path can be String or ArrayRef
+
+  commit
+        $gs->commit();
+
+    commit the store changes into Git
+
+  discard
+        $gs->discard();
+
+    discard the store changes
+
+INSTALL ISSUE NOW
+    It requires the Git::PurePerl master code. you must git clone it from
+    <http://github.com/acme/git-pureperl/tree/master> and install into your
+    local dir.
+
+    The version would jump to 0.01 after a new Git::PurePerl release.
+
+SEE ALSO
+    Article
+        <http://www.newartisans.com/2008/05/using-git-as-a-versioned-data-st
+        ore-in-python.html>
+
+    Python binding
+        <http://github.com/jwiegley/git-issues/tree/master>
+
+    Ruby binding
+        <http://github.com/georgi/git_store/tree/master>
+
+Git URL
+    <http://github.com/fayland/perl-git-store/tree/master>
+
+AUTHOR
+    Fayland Lam, "<fayland at gmail.com>"
+
+COPYRIGHT & LICENSE
+    Copyright 2009 Fayland Lam, all rights reserved.
+
+    This program is free software; you can redistribute it and/or modify it
+    under the same terms as Perl itself.
+
