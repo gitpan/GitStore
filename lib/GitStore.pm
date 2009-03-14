@@ -3,19 +3,21 @@ package GitStore;
 use Moose;
 use Git::PurePerl;
 use Storable qw(nfreeze thaw);
-use Data::Dumper;
+use Path::Class;
 
-our $VERSION = '0.01_01';
+our $VERSION = '0.01';
 our $AUTHORITY = 'cpan:FAYLAND';
 
 has 'repo' => ( is => 'ro', isa => 'Str', required => 1 );
 has 'branch' => ( is => 'rw', isa => 'Str', default => 'master' );
 
 has 'head' => ( is => 'rw', isa => 'Str' );
+has 'head_directory_entries' => ( is => 'rw', isa => 'ArrayRef', default => sub { [] } );
 has 'root' => ( is => 'rw', isa => 'HashRef', default => sub { {} } );
 has 'to_add' => ( is => 'rw', isa => 'HashRef', default => sub { {} } );
+has 'to_delete' => ( is => 'rw', isa => 'ArrayRef', default => sub { [] } );
 
-has 'git_perl' => (
+has 'git' => (
     is => 'ro',
     isa => 'Git::PurePerl',
     lazy => 1,
@@ -45,13 +47,15 @@ sub BUILDARGS {
 sub load {
     my $self = shift;
     
-    $self->{head} = $self->git_perl->ref_sha1('refs/heads/' . $self->branch);
+    $self->{head} = $self->git->ref_sha1('refs/heads/' . $self->branch);
     if ( $self->{head} ) {
-        my $commit = $self->git_perl->ref('refs/heads/' . $self->branch);
+        my $commit = $self->git->ref('refs/heads/' . $self->branch);
         my $tree = $commit->tree;
         my @directory_entries = $tree->directory_entries;
+        $self->head_directory_entries(\@directory_entries); # for delete
         my $root;
         foreach my $d ( @directory_entries ) {
+            next unless $d->object;
             $root->{ $d->filename } = _cond_thaw( $d->object->content );
         }
         $self->root($root);
@@ -63,6 +67,9 @@ sub get {
     
     $path = join('/', @$path) if ref $path eq 'ARRAY';
 
+    if ( grep { $_ eq $path } @{$self->to_delete} ) {
+        return;
+    }
     if ( exists $self->to_add->{ $path } ) {
         return $self->to_add->{ $path };
     }
@@ -73,25 +80,34 @@ sub get {
     return;
 }
 
-sub store {
+sub set {
     my ( $self, $path, $content ) = @_;
     
     $path = join('/', @$path) if ref $path eq 'ARRAY';
-
     $self->{to_add}->{$path} = $content;
 }
 
+*remove = \&delete;
+sub delete {
+    my ( $self, $path ) = @_;
+    
+    $path = join('/', @$path) if ref $path eq 'ARRAY';
+    push @{$self->{to_delete}}, $path;
+    
+}
+
 sub commit {
-    my $self = shift;
+    my ( $self, $message ) = @_;
     
-    return unless scalar keys %{$self->{to_add}};
+    return unless ( scalar keys %{$self->{to_add}} or scalar @{$self->to_delete} );
     
+    # for add
     my @directory_entries;
     foreach my $path ( keys %{$self->{to_add}} ) {
         my $content = $self->to_add->{$path};
         $content = nfreeze( $content ) if ( ref $content );
         my $blob = Git::PurePerl::NewObject::Blob->new( content => $content );
-        $self->git_perl->put_object($blob);
+        $self->git->put_object($blob);
         my $de = Git::PurePerl::NewDirectoryEntry->new(
             mode     => '100644',
             filename => $path,
@@ -99,16 +115,39 @@ sub commit {
         );
         push @directory_entries, $de;
     }
-
-    my $tree = Git::PurePerl::NewObject::Tree->new(
-        directory_entries => \@directory_entries,
-    );
-    $self->git_perl->put_object($tree);
-    my $commit = Git::PurePerl::NewObject::Commit->new( tree => $tree->sha1 );
-    $self->git_perl->put_object($commit);
+    if ( scalar @directory_entries ) {
+        my $tree = Git::PurePerl::NewObject::Tree->new(
+            directory_entries => \@directory_entries,
+        );
+        $self->git->put_object($tree);
+        
+        my $content = _build_my_content( $tree->sha1, $message || 'Your Comments Here' );
+        my $commit = Git::PurePerl::NewObject::Commit->new(
+            tree => $tree->sha1,
+            content => $content
+        );
+        $self->git->put_object($commit);
+    }
+    
+    # for delete
+    my @head_directory_entries = @{ $self->head_directory_entries };
+    if ( scalar @head_directory_entries ) {
+        foreach my $dpath ( @{ $self->to_delete } ) {
+            if ( exists $self->root->{$dpath} ) {
+                # get the directory_entry
+                my @entries = grep { $dpath eq $_->filename } @head_directory_entries;
+                my $sha1 = ( scalar @entries ) ? $entries[0]->sha1 : undef;
+                if ( $sha1 ) {
+                    file( $self->git->directory, '.git', 'objects', substr( $sha1, 0, 2 ), substr( $sha1, 2 ) )
+                        ->remove(); # just remove the file, and no commit, YYY
+                }
+            }
+        }
+    }
     
     # reload
     $self->{to_add} = {};
+    $self->{to_delete} = [];
     $self->load;
 }
 
@@ -116,7 +155,19 @@ sub discard {
     my $self = shift;
     
     $self->{to_add} = {};
+    $self->{to_delete} = [];
     $self->load;
+}
+
+sub _build_my_content {
+    my ( $tree, $message ) = @_;
+    my $content;
+    $content .= "tree $tree\n";
+    $content .= "author Fayland Lam <fayland\@gmail.com> 1226651274 +0000\n";
+    $content .= "committer Fayland Lam <fayland\@gmail.com> 1226651274 +0000\n";
+    $content .= "\n";
+    $content .= "$message\n";
+    return $content;
 }
 
 sub _cond_thaw {
@@ -150,10 +201,10 @@ GitStore - Git as versioned data store in Perl
     use GitStore;
 
     my $gs = GitStore->new('/path/to/repo');
-    $gs->store( 'users/obj.txt', $obj );
-    $gs->store( ['config', 'wiki.txt'], { hash_ref => 1 } );
+    $gs->set( 'users/obj.txt', $obj );
+    $gs->set( ['config', 'wiki.txt'], { hash_ref => 1 } );
     $gs->commit();
-    $gs->store( 'yyy/xxx.log', 'Log me' );
+    $gs->set( 'yyy/xxx.log', 'Log me' );
     $gs->discard();
     
     # later or in another pl
@@ -173,11 +224,11 @@ It is inspired by the Python and Ruby binding. check SEE ALSO
     GitStore->new('/path/to/repo');
     GitStore->new( repo => '/path/to/repo', branch => 'mybranch' );
 
-=head2 store($path, $val)
+=head2 set($path, $val)
 
-    $gs->store( 'yyy/xxx.log', 'Log me' );
-    $gs->store( ['config', 'wiki.txt'], { hash_ref => 1 } );
-    $gs->store( 'users/obj.txt', $obj );
+    $gs->set( 'yyy/xxx.log', 'Log me' );
+    $gs->set( ['config', 'wiki.txt'], { hash_ref => 1 } );
+    $gs->set( 'users/obj.txt', $obj );
 
 Store $val as a $path file in Git
 
@@ -194,23 +245,24 @@ Get $val from the $path file
 
 $path can be String or ArrayRef
 
+=head2 delete($path)
+
+=head2 remove($path)
+
+remove $path from Git store
+
 =head2 commit
 
     $gs->commit();
+    $gs->commit('Your Comments Here');
 
-commit the B<store> changes into Git
+commit the B<set> changes into Git
 
 =head2 discard
 
     $gs->discard();
 
-discard the B<store> changes
-
-=head1 INSTALL ISSUE NOW
-
-It requires the Git::PurePerl master code. you must git clone it from L<http://github.com/acme/git-pureperl/tree/master> and install into your local dir.
-
-The version would jump to 0.01 after a new L<Git::PurePerl> release.
+discard the B<set> changes
 
 =head1 SEE ALSO
 

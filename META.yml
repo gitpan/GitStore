@@ -16,9 +16,9 @@ no_index:
     - inc
     - t
 requires:
-  Git::PurePerl: 0.38
+  Git::PurePerl: 0.40
   Moose: 0.56
   Storable: 2.18
 resources:
   license: http://dev.perl.org/licenses/
-version: 0.01_01
+version: 0.01
