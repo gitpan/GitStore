@@ -4,7 +4,7 @@ GitStore - Git as versioned data store in Perl
 
 # VERSION
 
-version 0.11
+version 0.12
 
 # SYNOPSIS
 
@@ -37,7 +37,8 @@ It is inspired by the Python and Ruby binding. check SEE ALSO
 
 - repo
 
-your git dir (without .git)
+your git directory or work directory (_GitStore_ will assume it's a work
+directory if it doesn't end with `.git`).
 
 - branch
 
@@ -59,7 +60,7 @@ $path can be String or ArrayRef. Any leading slashes ('/') in the path
 will be stripped, as to make it a valid Git path.  The same 
 grooming is done for the `get()` and `delete()` methods.
 
-$val can be String or Ref[HashRef|ArrayRef|Ref[Ref]] or blessed Object
+$val can be String or Ref\[HashRef|ArrayRef|Ref\[Ref\]\] or blessed Object
 
 ## get($path)
 
@@ -93,6 +94,13 @@ discard the __set__ changes
 
 Returns a list of [GitStore::Revision](http://search.cpan.org/perldoc?GitStore::Revision) objects representing the changes
 brought to the _$path_. The changes are returned in ascending commit order.
+
+## list($regex)
+
+    @entries = $gs->list( qr/\.txt$/ );
+
+Returns a list of all entries in the repository, possibly filtered by the 
+optional _$regex_.
 
 # FAQ
 
@@ -138,7 +146,7 @@ will be created to keep Git happy.
 
 - Ruby binding
 
-[http://github.com/georgi/git_store/tree/master](http://github.com/georgi/git_store/tree/master)
+[http://github.com/georgi/git\_store/tree/master](http://github.com/georgi/git\_store/tree/master)
 
 # Git URL
 

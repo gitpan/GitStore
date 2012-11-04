@@ -5,7 +5,7 @@
       "Yanick Champoux <yanick@cpan.org>"
    ],
    "dynamic_config" : 0,
-   "generated_by" : "Dist::Zilla version 4.300010, CPAN::Meta::Converter version 2.120630",
+   "generated_by" : "Dist::Zilla version 4.300028, CPAN::Meta::Converter version 2.120921",
    "license" : [
       "perl_5"
    ],
@@ -27,6 +27,7 @@
       },
       "runtime" : {
          "requires" : {
+            "Carp" : "0",
             "DateTime" : "0",
             "Git::PurePerl" : "0",
             "List::Util" : "0",
@@ -40,7 +41,6 @@
       },
       "test" : {
          "requires" : {
-            "Carp" : "0",
             "File::Find" : "0",
             "File::Temp" : "0",
             "FindBin" : "0",
@@ -53,11 +53,11 @@
    "provides" : {
       "GitStore" : {
          "file" : "lib/GitStore.pm",
-         "version" : "0.11"
+         "version" : "0.12"
       },
       "GitStore::Revision" : {
          "file" : "lib/GitStore/Revision.pm",
-         "version" : "0.11"
+         "version" : "0.12"
       }
    },
    "release_status" : "stable",
@@ -73,7 +73,7 @@
          "web" : "https://github.com/yanick/perl-git-store"
       }
    },
-   "version" : "0.11",
+   "version" : "0.12",
    "x_authority" : "cpan:YANICK"
 }
 

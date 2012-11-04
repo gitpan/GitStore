@@ -2,7 +2,7 @@ NAME
     GitStore - Git as versioned data store in Perl
 
 VERSION
-    version 0.11
+    version 0.12
 
 SYNOPSIS
         use GitStore;
@@ -29,7 +29,8 @@ METHODS
         GitStore->new( repo => '/path/to/repo', author => 'Someone Unknown <unknown\@what.com>' );
 
     repo
-        your git dir (without .git)
+        your git directory or work directory (*GitStore* will assume it's a
+        work directory if it doesn't end with ".git").
 
     branch
         your branch name, default is 'master'
@@ -77,6 +78,12 @@ METHODS
     Returns a list of GitStore::Revision objects representing the changes
     brought to the *$path*. The changes are returned in ascending commit
     order.
+
+  list($regex)
+        @entries = $gs->list( qr/\.txt$/ );
+
+    Returns a list of all entries in the repository, possibly filtered by
+    the optional *$regex*.
 
 FAQ
   why the files are not there?
