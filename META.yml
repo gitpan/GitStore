@@ -23,10 +23,10 @@ name: GitStore
 provides:
   GitStore:
     file: lib/GitStore.pm
-    version: 0.12
+    version: 0.13
   GitStore::Revision:
     file: lib/GitStore/Revision.pm
-    version: 0.12
+    version: 0.13
 requires:
   Carp: 0
   DateTime: 0
@@ -42,5 +42,5 @@ resources:
   bugtracker: http://rt.cpan.org/Public/Dist/Display.html?Name=GitStore
   homepage: http://search.cpan.org/dist/GitStore/
   repository: https://github.com/yanick/perl-git-store.git
-version: 0.12
+version: 0.13
 x_authority: cpan:YANICK

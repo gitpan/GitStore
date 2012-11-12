@@ -3,7 +3,7 @@ BEGIN {
   $GitStore::Revision::AUTHORITY = 'cpan:YANICK';
 }
 {
-  $GitStore::Revision::VERSION = '0.12';
+  $GitStore::Revision::VERSION = '0.13';
 }
 #ABSTRACT: the state of a given path for a specific commit
 
@@ -93,7 +93,7 @@ GitStore::Revision - the state of a given path for a specific commit
 
 =head1 VERSION
 
-version 0.12
+version 0.13
 
 =head1 SYNOPSIS
 

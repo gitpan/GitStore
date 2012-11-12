@@ -24,7 +24,7 @@ my %module_build_args = (
     "Yanick Champoux <yanick\@cpan.org>"
   ],
   "dist_name" => "GitStore",
-  "dist_version" => "0.12",
+  "dist_version" => "0.13",
   "license" => "perl",
   "module_name" => "GitStore",
   "recommends" => {},
