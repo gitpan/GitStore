@@ -22,7 +22,7 @@ my %module_build_args = (
     "Yanick Champoux <yanick\@cpan.org>"
   ],
   "dist_name" => "GitStore",
-  "dist_version" => "0.14",
+  "dist_version" => "0.15",
   "license" => "perl",
   "module_name" => "GitStore",
   "recommends" => {},
@@ -33,6 +33,7 @@ my %module_build_args = (
     "Git::PurePerl" => 0,
     "List::Util" => 0,
     "Moose" => 0,
+    "Moose::Role" => 0,
     "Moose::Util::TypeConstraints" => 0,
     "Path::Class" => 0,
     "Storable" => 0,

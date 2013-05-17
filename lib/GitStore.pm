@@ -3,7 +3,7 @@ BEGIN {
   $GitStore::AUTHORITY = 'cpan:YANICK';
 }
 {
-  $GitStore::VERSION = '0.14';
+  $GitStore::VERSION = '0.15';
 }
 #ABSTRACT: Git as versioned data store in Perl
 
@@ -447,7 +447,7 @@ GitStore - Git as versioned data store in Perl
 
 =head1 VERSION
 
-version 0.14
+version 0.15
 
 =head1 SYNOPSIS
 

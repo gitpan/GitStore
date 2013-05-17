@@ -57,6 +57,7 @@ eval { $v .= pmver('Git::PurePerl','any version') };
 eval { $v .= pmver('List::Util','any version') };
 eval { $v .= pmver('Module::Build','0.3601') };
 eval { $v .= pmver('Moose','any version') };
+eval { $v .= pmver('Moose::Role','any version') };
 eval { $v .= pmver('Moose::Util::TypeConstraints','any version') };
 eval { $v .= pmver('Path::Class','any version') };
 eval { $v .= pmver('Storable','any version') };
