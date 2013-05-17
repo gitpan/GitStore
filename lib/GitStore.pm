@@ -3,7 +3,7 @@ BEGIN {
   $GitStore::AUTHORITY = 'cpan:YANICK';
 }
 {
-  $GitStore::VERSION = '0.13';
+  $GitStore::VERSION = '0.14';
 }
 #ABSTRACT: Git as versioned data store in Perl
 
@@ -11,7 +11,6 @@ use Moose;
 use Moose::Util::TypeConstraints;
 use Git::PurePerl;
 use Carp;
-use Storable qw(nfreeze thaw);
 
 use Path::Class qw/ dir file /;
 
@@ -34,6 +33,7 @@ coerce PurePerlActor
 has 'repo' => ( is => 'ro', isa => 'Str', required => 1 );
 
 has 'branch' => ( is => 'rw', isa => 'Str', default => 'master' );
+
 has author => ( 
     is => 'rw', 
     isa => 'PurePerlActor',  
@@ -43,6 +43,40 @@ has author => (
             email => 'anon@127.0.0.1' 
         );
 } );
+
+has serializer => (
+    is => 'ro',
+    default => sub {
+        require Storable;
+        return sub { return Storable::nfreeze($_[2]); }
+    },
+);
+
+has deserializer => (
+    is => 'ro',
+    default => sub {
+        require Storable;
+
+        return sub {
+            my $data = $_[2];
+
+            my $magic = eval { Storable::read_magic($data); };
+
+            return $data unless $magic && $magic->{major} && $magic->{major} >= 2 && $magic->{major} <= 5;
+
+            my $thawed = eval { Storable::thaw($data) };
+
+            # false alarm... looked like a Storable, but wasn't.
+            return $@ ? $data : $thawed;
+        }
+    },
+);
+
+has autocommit => (
+    is      => 'ro',
+    isa     => 'Bool',
+    default => 0,
+);
 
 sub _clean_directories {
     my ( $self, $dir ) = @_;
@@ -193,7 +227,7 @@ sub get {
 
     my $object = $self->git->get_object($sha1) or return;
 
-    return _cond_thaw($object->content);
+    return $self->deserializer->($self,$path,$object->content);
 }
 
 sub set {
@@ -203,13 +237,18 @@ sub set {
 
     my $dir = $self->_cd_dir($path,1) or return;
 
-    $content = nfreeze( $content ) if ( ref $content );
+    $content = $self->serializer->( $self, $path, $content ) if ref $content;
 
     my $blob = Git::PurePerl::NewObject::Blob->new( content => $content );
     $self->git->put_object($blob);
 
-    $dir->{FILES}{$path->basename} = $blob->sha1;
+    return $dir->{FILES}{$path->basename} = $blob->sha1;
 }
+
+after [ 'set', 'delete' ] => sub {
+    my $self = shift;
+    $self->commit if $self->autocommit;
+};
 
 *remove = \&delete;
 sub delete {
@@ -306,22 +345,6 @@ sub discard {
     my $self = shift;
 
     $self->load;
-}
-
-sub _cond_thaw {
-    my $data = shift;
-
-    my $magic = eval { Storable::read_magic($data); };
-    if ($magic && $magic->{major} && $magic->{major} >= 2 && $magic->{major} <= 5) {
-        my $thawed = eval { Storable::thaw($data) };
-        if ($@) {
-            # false alarm... looked like a Storable, but wasn't.
-            return $data;
-        }
-        return $thawed;
-    } else {
-        return $data;
-    }
 }
 
 sub _find_file {
@@ -424,7 +447,7 @@ GitStore - Git as versioned data store in Perl
 
 =head1 VERSION
 
-version 0.13
+version 0.14
 
 =head1 SYNOPSIS
 
@@ -468,6 +491,67 @@ your branch name, default is 'master'
 =item author
 
 It is used in the commit info
+
+=item serializer
+
+Can be used to define a serializing function that will be used if the value to
+save is a reference.  When invoked, the function will be passed a reference to
+the store object, the path under which the value will be saved, and the value
+itself. For example, one could do different serialization via:
+
+    my $store = GitStore->new(
+        repo => '/path/to/repo',
+        serializer => sub {
+            my( $store, $path, $value ) = @_;
+
+            if ( $path =~ m#^json# ) {
+                return encode_json($value);
+            }
+            else {
+                # defaults to YAML
+                return YAML::Dump($value);
+            }
+        },
+    );
+
+The default serializer uses L<Storable/nfreeze>.
+
+=item deserializer
+
+Called when a value is picked from the store to be (potentially) deserialized.
+Just like the serializer function, it is passed three arguments: the store
+object, the path of the value to deserialize and the value itself. To revisit
+the example for C<serializer>, the full serializer/deserializer dance would
+be:
+
+    my $store = GitStore->new(
+        repo => '/path/to/repo',
+        serializer => sub {
+            my( $store, $path, $value ) = @_;
+
+            return $path =~ m#^json# 
+                                ? encode_json($value)
+                                : YAML::Dump($value)
+                                ;
+        },
+        deserializer => sub {
+            my( $store, $path, $value ) = @_;
+            
+            return $path =~ #^json#
+                                ?decode_json($value)
+                                : YAML::Load($value)
+                                ;
+        },
+    );
+
+The default deserializer will try to deserialize the value
+retrieved from the store via L<Storable/thaw> and, if this fails,
+return the value verbatim.
+
+=item autocommit
+
+If set to C<true>, any call to C<set()> or C<delete()> will automatically call an
+implicit C<commit()>. Defaults to C<false>.
 
 =back
 
@@ -599,7 +683,7 @@ Yanick Champoux <yanick@cpan.org>
 
 =head1 COPYRIGHT AND LICENSE
 
-This software is copyright (c) 2012 by Fayland Lam <fayland@gmail.com>.
+This software is copyright (c) 2013 by Fayland Lam <fayland@gmail.com>.
 
 This is free software; you can redistribute it and/or modify it under
 the same terms as the Perl 5 programming language system itself.

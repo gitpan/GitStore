@@ -3,7 +3,7 @@ BEGIN {
   $GitStore::Revision::AUTHORITY = 'cpan:YANICK';
 }
 {
-  $GitStore::Revision::VERSION = '0.13';
+  $GitStore::Revision::VERSION = '0.14';
 }
 #ABSTRACT: the state of a given path for a specific commit
 
@@ -74,9 +74,7 @@ has file_object => (
 sub content {
     my $self = shift;
 
-    GitStore::_cond_thaw(
-        scalar $self->file_object->object->content
-    );
+    $self->gitstore->deserializer->($self->gitstore,$self->path,$self->file_object->object->content);
 }
 
 
@@ -93,7 +91,7 @@ GitStore::Revision - the state of a given path for a specific commit
 
 =head1 VERSION
 
-version 0.13
+version 0.14
 
 =head1 SYNOPSIS
 
@@ -157,7 +155,7 @@ Yanick Champoux <yanick@cpan.org>
 
 =head1 COPYRIGHT AND LICENSE
 
-This software is copyright (c) 2012 by Fayland Lam <fayland@gmail.com>.
+This software is copyright (c) 2013 by Fayland Lam <fayland@gmail.com>.
 
 This is free software; you can redistribute it and/or modify it under
 the same terms as the Perl 5 programming language system itself.

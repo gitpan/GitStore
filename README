@@ -2,7 +2,7 @@ NAME
     GitStore - Git as versioned data store in Perl
 
 VERSION
-    version 0.13
+    version 0.14
 
 SYNOPSIS
         use GitStore;
@@ -37,6 +37,65 @@ METHODS
 
     author
         It is used in the commit info
+
+    serializer
+        Can be used to define a serializing function that will be used if
+        the value to save is a reference. When invoked, the function will be
+        passed a reference to the store object, the path under which the
+        value will be saved, and the value itself. For example, one could do
+        different serialization via:
+
+            my $store = GitStore->new(
+                repo => '/path/to/repo',
+                serializer => sub {
+                    my( $store, $path, $value ) = @_;
+
+                    if ( $path =~ m#^json# ) {
+                        return encode_json($value);
+                    }
+                    else {
+                        # defaults to YAML
+                        return YAML::Dump($value);
+                    }
+                },
+            );
+
+        The default serializer uses "nfreeze" in Storable.
+
+    deserializer
+        Called when a value is picked from the store to be (potentially)
+        deserialized. Just like the serializer function, it is passed three
+        arguments: the store object, the path of the value to deserialize
+        and the value itself. To revisit the example for "serializer", the
+        full serializer/deserializer dance would be:
+
+            my $store = GitStore->new(
+                repo => '/path/to/repo',
+                serializer => sub {
+                    my( $store, $path, $value ) = @_;
+
+                    return $path =~ m#^json# 
+                                        ? encode_json($value)
+                                        : YAML::Dump($value)
+                                        ;
+                },
+                deserializer => sub {
+                    my( $store, $path, $value ) = @_;
+            
+                    return $path =~ #^json#
+                                        ?decode_json($value)
+                                        : YAML::Load($value)
+                                        ;
+                },
+            );
+
+        The default deserializer will try to deserialize the value retrieved
+        from the store via "thaw" in Storable and, if this fails, return the
+        value verbatim.
+
+    autocommit
+        If set to "true", any call to "set()" or "delete()" will
+        automatically call an implicit "commit()". Defaults to "false".
 
   set($path, $val)
         $gs->set( 'yyy/xxx.log', 'Log me' );
@@ -136,7 +195,7 @@ AUTHORS
     *   Yanick Champoux <yanick@cpan.org>
 
 COPYRIGHT AND LICENSE
-    This software is copyright (c) 2012 by Fayland Lam <fayland@gmail.com>.
+    This software is copyright (c) 2013 by Fayland Lam <fayland@gmail.com>.
 
     This is free software; you can redistribute it and/or modify it under
     the same terms as the Perl 5 programming language system itself.

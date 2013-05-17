@@ -1,5 +1,13 @@
 Revision history for GitStore
 
+0.14 2013-05-16
+ [ENHANCEMENTS]
+ - serialization is now configurable.
+ - new 'autocommit' attribute.
+
+ [STATISTICS]
+ - code churn: 7 files changed, 214 insertions(+), 26 deletions(-)
+
 0.13 2012-11-11
  [NEW FEATURES]
  - New get_revision() method.
